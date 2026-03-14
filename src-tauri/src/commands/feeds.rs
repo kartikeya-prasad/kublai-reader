@@ -339,9 +339,46 @@ pub async fn update_feed(
 pub async fn import_opml(xml: String, db: State<'_, AppDatabase>) -> Result<Vec<Feed>, String> {
     let items = feed::opml::parse_opml(&xml).map_err(|e| e.to_string())?;
     let mut feeds = Vec::new();
+    let mut folder_cache: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
 
     for item in items {
-        match add_feed(item.xml_url, item.folder_id, db.clone()).await {
+        // Resolve folder_name -> folder_id, creating folder if needed
+        let folder_id = match item.folder_name {
+            Some(ref name) => {
+                if let Some(&id) = folder_cache.get(name) {
+                    Some(id)
+                } else {
+                    let id = {
+                        let conn = db.conn.lock().map_err(|e| e.to_string())?;
+                        // Check if folder already exists
+                        let existing: Option<i64> = conn.query_row(
+                            "SELECT id FROM folders WHERE name = ?1 AND parent_id IS NULL",
+                            [name],
+                            |row| row.get(0),
+                        ).ok();
+                        if let Some(eid) = existing {
+                            eid
+                        } else {
+                            let pos: i64 = conn.query_row(
+                                "SELECT COALESCE(MAX(position), -1) + 1 FROM folders WHERE parent_id IS NULL",
+                                [],
+                                |row| row.get(0),
+                            ).unwrap_or(0);
+                            conn.execute(
+                                "INSERT INTO folders (name, position) VALUES (?1, ?2)",
+                                rusqlite::params![name, pos],
+                            ).map_err(|e| e.to_string())?;
+                            conn.last_insert_rowid()
+                        }
+                    };
+                    folder_cache.insert(name.clone(), id);
+                    Some(id)
+                }
+            }
+            None => None,
+        };
+
+        match add_feed(item.xml_url, folder_id, db.clone()).await {
             Ok(feed) => feeds.push(feed),
             Err(e) => log::warn!("Failed to import feed {}: {}", item.title, e),
         }

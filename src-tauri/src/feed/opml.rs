@@ -1,10 +1,9 @@
-use serde::Deserialize;
-
 #[derive(Debug, Clone)]
 pub struct OpmlItem {
     pub title: String,
     pub xml_url: String,
     pub html_url: Option<String>,
+    pub folder_name: Option<String>,
     pub folder_id: Option<i64>,
 }
 
@@ -44,7 +43,8 @@ pub fn parse_opml(xml: &str) -> Result<Vec<OpmlItem>, Box<dyn std::error::Error>
                     title: text.unwrap_or_else(|| url.clone()),
                     xml_url: url,
                     html_url,
-                    folder_id: None, // Will be resolved during import
+                    folder_name: current_folder.clone(),
+                    folder_id: None, // resolved during import
                 });
             } else if let Some(folder_name) = text {
                 // This is a folder (outline without xmlUrl)

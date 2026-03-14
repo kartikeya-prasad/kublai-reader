@@ -26,7 +26,7 @@ pub fn run() {
 
             // Start background feed refresh scheduler
             let handle = app.handle().clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 background::scheduler::run(handle).await;
             });
 
