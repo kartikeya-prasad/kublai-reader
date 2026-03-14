@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ===== FONT FACES ===== */
+/* Fonts will be self-hosted in static/fonts/ */
+
+/* ===== THEME SYSTEM ===== */
+/* Semi-transparent backgrounds allow Mica effect to show through */
+
+:root {
+  /* Light theme (default) */
+  --color-bg-base: rgba(255, 255, 255, 0.72);
+  --color-bg-surface: rgba(246, 246, 246, 0.82);
+  --color-bg-elevated: rgba(255, 255, 255, 0.92);
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-active: rgba(0, 0, 0, 0.06);
+
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #5c5c6f;
+  --color-text-tertiary: #8e8e9a;
+  --color-text-inverse: #ffffff;
+
+  --color-accent: #6366f1;
+  --color-accent-hover: #5558e6;
+  --color-accent-soft: rgba(99, 102, 241, 0.1);
+
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
+  --color-divider: rgba(0, 0, 0, 0.06);
+
+  --color-unread-dot: #6366f1;
+  --color-star: #f59e0b;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --titlebar-height: 40px;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg-base: rgba(28, 28, 32, 0.72);
+  --color-bg-surface: rgba(36, 36, 42, 0.82);
+  --color-bg-elevated: rgba(44, 44, 52, 0.92);
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
+  --color-bg-active: rgba(255, 255, 255, 0.08);
+
+  --color-text-primary: #e8e8ec;
+  --color-text-secondary: #a0a0b0;
+  --color-text-tertiary: #6e6e80;
+  --color-text-inverse: #1a1a2e;
+
+  --color-accent: #818cf8;
+  --color-accent-hover: #9ba3fb;
+  --color-accent-soft: rgba(129, 140, 248, 0.12);
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.15);
+  --color-divider: rgba(255, 255, 255, 0.06);
+
+  --color-unread-dot: #818cf8;
+  --color-star: #fbbf24;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+/* ===== BASE STYLES ===== */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smooth theme transitions */
+*,
+*::before,
+*::after {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* ===== SCROLLBAR STYLING ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ===== SELECTION ===== */
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-text-primary);
+}
+
+/* ===== UTILITY CLASSES ===== */
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

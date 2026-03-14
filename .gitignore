@@ -1,0 +1,28 @@
+# Rust / Cargo
+src-tauri/target/
+
+# Node
+node_modules/
+dist/
+
+# Tauri
+.tauri/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude
+.claude/
