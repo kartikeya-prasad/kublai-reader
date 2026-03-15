@@ -18,6 +18,8 @@ pub struct Feed {
     pub site_url: Option<String>,
     pub description: Option<String>,
     pub icon_url: Option<String>,
+    pub favicon_id: Option<i64>,
+    pub sync_id: Option<String>,
     pub auto_parse: bool,
     pub update_interval: i64,
     pub etag: Option<String>,
@@ -50,6 +52,28 @@ pub struct Article {
     pub is_read: bool,
     pub is_starred: bool,
     pub is_read_later: bool,
+    pub sync_id: Option<String>,
+    pub content_cached_at: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Favicon {
+    pub id: i64,
+    pub hash: String,
+    pub data: Vec<u8>,
+    pub mime_type: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncAccount {
+    pub id: i64,
+    pub provider: String,
+    pub server_url: String,
+    pub username: String,
+    pub auth_token: Option<String>,
+    pub last_synced: Option<String>,
     pub created_at: String,
 }
 

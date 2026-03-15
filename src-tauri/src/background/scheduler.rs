@@ -112,5 +112,41 @@ pub async fn run(app: AppHandle) {
                 }
             }
         }
+
+        // Cache cleanup
+        if let Some(db_cleanup) = app.try_state::<crate::db::AppDatabase>() {
+            if let Ok(conn) = db_cleanup.conn.lock() {
+                let max_days: i64 = conn.query_row(
+                    "SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'cache_max_days'",
+                    [],
+                    |row| row.get(0),
+                ).unwrap_or(60);
+
+                let max_per_feed: i64 = conn.query_row(
+                    "SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'cache_max_per_feed'",
+                    [],
+                    |row| row.get(0),
+                ).unwrap_or(500);
+
+                let _ = conn.execute(
+                    "DELETE FROM articles WHERE is_starred = 0 AND is_read_later = 0
+                     AND created_at < datetime('now', printf('-%d days', ?))",
+                    [max_days],
+                );
+
+                let feed_ids: Vec<i64> = {
+                    let mut stmt = conn.prepare("SELECT id FROM feeds").unwrap();
+                    stmt.query_map([], |r| r.get(0)).unwrap().filter_map(|r| r.ok()).collect()
+                };
+                for fid in feed_ids {
+                    let _ = conn.execute(
+                        "DELETE FROM articles WHERE feed_id = ?1 AND is_starred = 0 AND is_read_later = 0
+                         AND id NOT IN (SELECT id FROM articles WHERE feed_id = ?1 ORDER BY published_at DESC LIMIT ?2)",
+                        rusqlite::params![fid, max_per_feed],
+                    );
+                }
+                log::info!("Cache cleanup complete");
+            }
+        }
     }
 }

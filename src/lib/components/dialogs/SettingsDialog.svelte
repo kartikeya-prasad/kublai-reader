@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { getState, closeSettingsDialog, updateReaderSettings } from "$lib/stores/app.svelte";
   import { setThemeMode, getThemeMode } from "$lib/utils/theme";
-  import { exportOpml, importOpml, setSetting } from "$lib/utils/tauri";
-  import type { ThemeMode } from "$lib/types";
+  import { exportOpml, importOpml, setSetting, getSetting, getSyncAccounts, addSyncAccount, removeSyncAccount, syncNow } from "$lib/utils/tauri";
+  import type { ThemeMode, SyncAccount } from "$lib/types";
 
   const appState = getState();
 
@@ -11,6 +12,21 @@
   let opmlStatus = $state<string | null>(null);
   let isExporting = $state(false);
   let isImporting = $state(false);
+
+  // Cache settings
+  let cacheMaxDays = $state(60);
+  let cacheMaxPerFeed = $state(500);
+
+  // Sync accounts
+  let syncAccounts = $state<SyncAccount[]>([]);
+  let showAddSync = $state(false);
+  let syncProvider = $state('freshrss');
+  let syncServerUrl = $state('');
+  let syncUsername = $state('');
+  let syncPassword = $state('');
+  let syncLoading = $state(false);
+  let syncError = $state('');
+  let syncingId = $state<number | null>(null);
 
   const REFRESH_OPTIONS = [
     { label: "15 minutes", value: 15 },
@@ -22,13 +38,13 @@
   ];
 
   const FONT_OPTIONS = [
-    { label: "System UI (Segoe UI Variable)", value: "Segoe UI Variable, Segoe UI, system-ui, sans-serif" },
-    { label: "Georgia", value: "Georgia, serif" },
-    { label: "Merriweather", value: "'Merriweather', Georgia, serif" },
-    { label: "Source Serif 4", value: "'Source Serif 4', Georgia, serif" },
-    { label: "Lora", value: "'Lora', Georgia, serif" },
-    { label: "Inter", value: "'Inter', system-ui, sans-serif" },
-    { label: "Charter", value: "Charter, Georgia, serif" },
+    { value: "'Inter', sans-serif", label: 'Inter', type: 'sans' },
+    { value: "'Plus Jakarta Sans', sans-serif", label: 'Plus Jakarta Sans', type: 'sans' },
+    { value: "'DM Sans', sans-serif", label: 'DM Sans', type: 'sans' },
+    { value: "'Literata', Georgia, serif", label: 'Literata', type: 'serif' },
+    { value: "'Source Serif 4', Georgia, serif", label: 'Source Serif 4', type: 'serif' },
+    { value: "'IBM Plex Serif', Georgia, serif", label: 'IBM Plex Serif', type: 'serif' },
+    { value: "system-ui, sans-serif", label: 'System Default', type: 'sans' },
   ];
 
   const WIDTH_OPTIONS = [
@@ -39,17 +55,61 @@
   ];
 
   const SHORTCUTS = [
-    { key: "Ctrl+F", action: "Search articles" },
-    { key: "J / K", action: "Next / previous article" },
-    { key: "R", action: "Mark as read/unread" },
-    { key: "S", action: "Star/unstar article" },
-    { key: "L", action: "Save for later" },
-    { key: "O", action: "Open in browser" },
-    { key: "P", action: "Parse/extract article" },
-    { key: "F5", action: "Refresh all feeds" },
-    { key: "Ctrl+,", action: "Open settings" },
-    { key: "Escape", action: "Close dialog / clear search" },
+    { key: '↑ / ↓', action: 'Navigate articles' },
+    { key: 'Enter', action: 'Open article' },
+    { key: 'Space', action: 'Page down in reader' },
+    { key: 'W', action: 'Toggle full-text extraction' },
+    { key: 'R', action: 'Toggle read/unread' },
+    { key: 'S', action: 'Star/unstar' },
+    { key: 'B', action: 'Bookmark/read later' },
+    { key: 'O', action: 'Open in browser' },
+    { key: 'Delete', action: 'Mark read, next article' },
+    { key: 'F5', action: 'Refresh feeds' },
+    { key: 'Ctrl+Shift+A', action: 'Mark all as read' },
+    { key: 'Ctrl+F', action: 'Search' },
+    { key: 'Ctrl+,', action: 'Settings' },
+    { key: 'Esc', action: 'Close / clear search' },
   ];
+
+  onMount(async () => {
+    const days = await getSetting('cache_max_days');
+    const perFeed = await getSetting('cache_max_per_feed');
+    if (days) cacheMaxDays = parseInt(days);
+    if (perFeed) cacheMaxPerFeed = parseInt(perFeed);
+    syncAccounts = await getSyncAccounts();
+  });
+
+  async function saveCacheSettings() {
+    await setSetting('cache_max_days', String(cacheMaxDays));
+    await setSetting('cache_max_per_feed', String(cacheMaxPerFeed));
+  }
+
+  async function handleAddSync() {
+    syncLoading = true;
+    syncError = '';
+    try {
+      const account = await addSyncAccount(syncProvider, syncServerUrl, syncUsername, syncPassword);
+      syncAccounts = [...syncAccounts, account];
+      showAddSync = false;
+      syncServerUrl = ''; syncUsername = ''; syncPassword = '';
+    } catch (e: any) {
+      syncError = e?.toString() ?? 'Connection failed';
+    } finally {
+      syncLoading = false;
+    }
+  }
+
+  async function handleRemoveSync(id: number) {
+    await removeSyncAccount(id);
+    syncAccounts = syncAccounts.filter(a => a.id !== id);
+  }
+
+  async function handleSyncNow(id: number) {
+    syncingId = id;
+    try { await syncNow(id); } catch {}
+    syncingId = null;
+    syncAccounts = await getSyncAccounts();
+  }
 
   async function setTheme(mode: ThemeMode) {
     themeMode = mode;
@@ -62,7 +122,6 @@
     opmlStatus = null;
     try {
       const xml = await exportOpml();
-      // Trigger download
       const blob = new Blob([xml], { type: "text/xml" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -261,6 +320,79 @@
         </div>
       </section>
 
+      <!-- Cache -->
+      <section class="settings-section">
+        <h3 class="section-title">Article Cache</h3>
+        <div class="setting-row">
+          <label class="setting-label">Keep articles for</label>
+          <div class="setting-control range-row">
+            <input type="range" min="7" max="365" step="1" bind:value={cacheMaxDays} onchange={saveCacheSettings} />
+            <span class="range-val">{cacheMaxDays} days</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label class="setting-label">Max per feed</label>
+          <div class="setting-control range-row">
+            <input type="range" min="100" max="2000" step="100" bind:value={cacheMaxPerFeed} onchange={saveCacheSettings} />
+            <span class="range-val">{cacheMaxPerFeed}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sync Accounts -->
+      <section class="settings-section">
+        <h3 class="section-title">Sync Accounts</h3>
+
+        {#each syncAccounts as account}
+          <div class="sync-account-row">
+            <div class="sync-account-info">
+              <span class="sync-provider">{account.provider === 'freshrss' ? 'FreshRSS' : 'Miniflux'}</span>
+              <span class="sync-username">{account.username} @ {account.server_url.replace(/^https?:\/\//, '').split('/')[0]}</span>
+              {#if account.last_synced}
+                <span class="sync-last">Last synced: {new Date(account.last_synced).toLocaleString()}</span>
+              {/if}
+            </div>
+            <div class="sync-account-actions">
+              <button class="btn-icon" onclick={() => handleSyncNow(account.id)} disabled={syncingId === account.id} title="Sync now">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class:spinning={syncingId === account.id}>
+                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.42"/>
+                </svg>
+              </button>
+              <button class="btn-icon danger" onclick={() => handleRemoveSync(account.id)} title="Remove">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        {/each}
+
+        {#if syncAccounts.length === 0}
+          <p class="sync-empty">No sync accounts configured.</p>
+        {/if}
+
+        {#if showAddSync}
+          <div class="sync-add-form">
+            <select bind:value={syncProvider} class="setting-select">
+              <option value="freshrss">FreshRSS</option>
+              <option value="miniflux">Miniflux</option>
+            </select>
+            <input type="url" bind:value={syncServerUrl} placeholder="Server URL (e.g. https://freshrss.example.com)" class="setting-input" />
+            <input type="text" bind:value={syncUsername} placeholder="Username" class="setting-input" />
+            <input type="password" bind:value={syncPassword} placeholder="Password" class="setting-input" />
+            {#if syncError}<p class="sync-error">{syncError}</p>{/if}
+            <div class="sync-form-actions">
+              <button class="btn-secondary" onclick={() => { showAddSync = false; syncError = ''; }}>Cancel</button>
+              <button class="btn-primary" onclick={handleAddSync} disabled={syncLoading || !syncServerUrl || !syncUsername}>
+                {syncLoading ? 'Connecting…' : 'Connect'}
+              </button>
+            </div>
+          </div>
+        {:else}
+          <button class="btn-secondary add-sync-btn" onclick={() => showAddSync = true}>+ Add Sync Account</button>
+        {/if}
+      </section>
+
       <!-- OPML -->
       <section class="settings-section">
         <h3 class="section-title">Import / Export</h3>
@@ -381,7 +513,7 @@
 
   /* ===== Sections ===== */
   .settings-section {
-    padding: 18px 20px 4px;
+    padding: 18px 20px 14px;
     border-bottom: 1px solid var(--color-divider);
   }
 
@@ -428,6 +560,18 @@
   .setting-desc {
     font-size: 11px;
     color: var(--color-text-tertiary);
+  }
+
+  .setting-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    flex-shrink: 0;
+    min-width: 120px;
+  }
+
+  .setting-control {
+    flex: 1;
   }
 
   /* ===== Theme Toggle ===== */
@@ -601,6 +745,182 @@
     font-weight: 500;
   }
 
+  /* ===== Range ===== */
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .range-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--color-accent);
+  }
+
+  .range-val {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    min-width: 60px;
+    text-align: right;
+  }
+
+  /* ===== Sync Accounts ===== */
+  .sync-account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+  }
+
+  .sync-account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+  }
+
+  .sync-provider {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sync-username {
+    font-size: 12px;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sync-last {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+  }
+
+  .sync-account-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+  }
+
+  .btn-icon:hover { background: var(--color-bg-active); }
+  .btn-icon.danger:hover { color: var(--color-danger); }
+  .btn-icon:disabled { opacity: 0.4; cursor: default; }
+
+  .sync-empty {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    margin: 4px 0;
+  }
+
+  .sync-error {
+    font-size: 11px;
+    color: var(--color-danger);
+    margin: 4px 0;
+  }
+
+  .sync-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .setting-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    box-sizing: border-box;
+    outline: none;
+  }
+
+  .setting-input:focus { border-color: var(--color-accent); }
+
+  .setting-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .sync-form-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 14px;
+    background: var(--color-accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.12s;
+  }
+
+  .btn-primary:disabled { opacity: 0.5; cursor: default; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 14px;
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .btn-secondary:hover { background: var(--color-bg-active); color: var(--color-text-primary); }
+
+  .add-sync-btn {
+    width: 100%;
+    margin-top: 4px;
+    justify-content: center;
+  }
+
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+
   /* ===== OPML ===== */
   .opml-row {
     display: flex;
@@ -675,7 +995,7 @@
     color: var(--color-text-secondary);
   }
 
-  /* Spinner */
+  /* ===== Spinner ===== */
   .btn-spinner {
     width: 12px;
     height: 12px;

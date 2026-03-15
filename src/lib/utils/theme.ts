@@ -1,4 +1,4 @@
-import { getCurrentWindow, Effect, EffectState } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type ThemeMode = "light" | "dark" | "auto";
 
@@ -21,26 +21,6 @@ async function detectSystemTheme(): Promise<"light" | "dark"> {
 }
 
 export async function initTheme() {
-  // Apply Mica effect
-  try {
-    const win = getCurrentWindow();
-    await win.setEffects({
-      effects: [Effect.Mica],
-      state: EffectState.FollowsWindowActiveState,
-    });
-  } catch (e) {
-    // Mica not available (Windows 10 or dev mode) — try Acrylic fallback
-    try {
-      const win = getCurrentWindow();
-      await win.setEffects({
-        effects: [Effect.Acrylic],
-        state: EffectState.FollowsWindowActiveState,
-      });
-    } catch {
-      // No blur effects available, solid background will be used
-    }
-  }
-
   // Apply initial theme
   const resolved = await detectSystemTheme();
   applyTheme(resolved);
@@ -54,7 +34,6 @@ export async function initTheme() {
       }
     });
   } catch {
-    // Fallback: use matchMedia listener
     window
       .matchMedia("(prefers-color-scheme: dark)")
       .addEventListener("change", (e) => {

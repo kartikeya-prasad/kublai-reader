@@ -1,6 +1,6 @@
 use rusqlite::Connection;
 
-const CURRENT_VERSION: i32 = 1;
+const CURRENT_VERSION: i32 = 2;
 
 pub fn run_migrations(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
     let version: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -9,7 +9,49 @@ pub fn run_migrations(conn: &Connection) -> Result<(), Box<dyn std::error::Error
         migrate_v1(conn)?;
     }
 
+    if version < 2 {
+        migrate_v2(conn)?;
+    }
+
     conn.pragma_update(None, "user_version", CURRENT_VERSION)?;
+    Ok(())
+}
+
+fn migrate_v2(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS favicons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT NOT NULL UNIQUE,
+            data BLOB NOT NULL,
+            mime_type TEXT NOT NULL DEFAULT 'image/png',
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS sync_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider TEXT NOT NULL,
+            server_url TEXT NOT NULL,
+            username TEXT NOT NULL,
+            auth_token TEXT,
+            last_synced TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        );"
+    )?;
+
+    // SQLite requires separate ALTER TABLE statements
+    conn.execute("ALTER TABLE feeds ADD COLUMN favicon_id INTEGER", [])?;
+    conn.execute("ALTER TABLE feeds ADD COLUMN sync_id TEXT", [])?;
+    conn.execute("ALTER TABLE articles ADD COLUMN sync_id TEXT", [])?;
+    conn.execute("ALTER TABLE articles ADD COLUMN content_cached_at TEXT", [])?;
+
+    conn.execute_batch(
+        "CREATE INDEX IF NOT EXISTS idx_feeds_sync ON feeds(sync_id);
+         CREATE INDEX IF NOT EXISTS idx_articles_sync ON articles(sync_id);
+
+         INSERT OR IGNORE INTO settings (key, value) VALUES ('cache_max_days', '60');
+         INSERT OR IGNORE INTO settings (key, value) VALUES ('cache_max_per_feed', '500');"
+    )?;
+
     Ok(())
 }
 

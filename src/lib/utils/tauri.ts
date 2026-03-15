@@ -7,6 +7,8 @@ import type {
   Folder,
   Tag,
   FeedTree,
+  SyncAccount,
+  SyncResult,
 } from "$lib/types";
 
 // ===== Feed Commands =====
@@ -159,6 +161,30 @@ export async function searchArticles(
   }
 ): Promise<ArticleListItem[]> {
   return invoke("search_articles", { query, ...params });
+}
+
+// ===== Favicon =====
+
+export async function getFavicon(feedId: number): Promise<string | null> {
+  return invoke<string | null>('get_favicon', { feedId });
+}
+
+// ===== Sync =====
+
+export async function getSyncAccounts(): Promise<SyncAccount[]> {
+  return invoke<SyncAccount[]>('get_sync_accounts');
+}
+
+export async function addSyncAccount(provider: string, serverUrl: string, username: string, password: string): Promise<SyncAccount> {
+  return invoke<SyncAccount>('add_sync_account', { provider, serverUrl, username, password });
+}
+
+export async function removeSyncAccount(accountId: number): Promise<void> {
+  return invoke<void>('remove_sync_account', { accountId });
+}
+
+export async function syncNow(accountId: number): Promise<SyncResult> {
+  return invoke<SyncResult>('sync_now', { accountId });
 }
 
 // ===== Settings =====

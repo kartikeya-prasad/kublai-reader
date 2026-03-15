@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Kitten body silhouette - sitting pose -->
+  <path d="
+    M 30 20
+    C 28 12, 32 5, 38 8
+    C 40 4, 44 3, 46 6
+    C 48 2, 52 2, 54 6
+    C 56 3, 60 4, 62 8
+    C 68 5, 72 12, 70 20
+    C 76 24, 78 32, 76 40
+    C 78 44, 78 50, 74 56
+    C 76 62, 74 68, 72 72
+    C 74 78, 76 82, 80 86
+    C 82 88, 82 92, 78 92
+    C 74 92, 70 88, 68 84
+    C 64 90, 56 92, 50 92
+    C 44 92, 36 90, 32 84
+    C 30 88, 26 92, 22 92
+    C 18 92, 18 88, 20 86
+    C 24 82, 26 78, 28 72
+    C 26 68, 24 62, 26 56
+    C 22 50, 22 44, 24 40
+    C 22 32, 24 24, 30 20
+    Z
+  " fill="#F8F9FA" stroke="#94A3B8" stroke-width="1.5"/>
+
+  <!-- Left ear inner -->
+  <path d="M 34 18 C 33 13, 36 9, 39 11 C 40 8, 43 7, 44 10 L 40 20 Z" fill="#FFC0CB" opacity="0.5"/>
+
+  <!-- Right ear inner -->
+  <path d="M 66 18 C 67 13, 64 9, 61 11 C 60 8, 57 7, 56 10 L 60 20 Z" fill="#FFC0CB" opacity="0.5"/>
+
+  <!-- Left eye -->
+  <ellipse cx="40" cy="38" rx="6" ry="5.5" fill="#60A5FA"/>
+  <ellipse cx="41" cy="37" rx="2" ry="2" fill="#1E3A5F"/>
+  <circle cx="38" cy="36" r="1.5" fill="white" opacity="0.7"/>
+
+  <!-- Right eye -->
+  <ellipse cx="60" cy="38" rx="6" ry="5.5" fill="#60A5FA"/>
+  <ellipse cx="61" cy="37" rx="2" ry="2" fill="#1E3A5F"/>
+  <circle cx="58" cy="36" r="1.5" fill="white" opacity="0.7"/>
+
+  <!-- Nose -->
+  <path d="M 48 46 L 50 49 L 52 46 Z" fill="#FFB6C1"/>
+
+  <!-- Mouth -->
+  <path d="M 50 49 C 48 52, 44 52, 43 50" stroke="#94A3B8" stroke-width="0.8" fill="none"/>
+  <path d="M 50 49 C 52 52, 56 52, 57 50" stroke="#94A3B8" stroke-width="0.8" fill="none"/>
+
+  <!-- Whiskers -->
+  <line x1="42" y1="46" x2="24" y2="42" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+  <line x1="42" y1="48" x2="24" y2="48" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+  <line x1="42" y1="50" x2="24" y2="54" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+  <line x1="58" y1="46" x2="76" y2="42" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+  <line x1="58" y1="48" x2="76" y2="48" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+  <line x1="58" y1="50" x2="76" y2="54" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+</svg>

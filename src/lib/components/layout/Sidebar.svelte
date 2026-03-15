@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import FeedItem from "../sidebar/FeedItem.svelte";
   import FolderItem from "../sidebar/FolderItem.svelte";
+  import ThemeToggle from "../common/ThemeToggle.svelte";
   import {
     getState,
     loadFeedTree,
@@ -25,8 +26,16 @@
 
 <div class="sidebar">
   <div class="sidebar-header">
-    <span class="sidebar-title">Feeds</span>
+    <div class="sidebar-brand">
+      <svg class="brand-logo" width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 15c-8 0-14 3-18 8-3 4-5 9-5 15 0 3 0.5 5 1.5 8-3-1-6-1.5-8.5-1.5-4 0-7 1-7 3s2 4 5 5c2 1 5 1.5 8 1.5-2 3-3 6-3 9 0 5 3 10 8 14 4 3 9 5 14 5h10c5 0 10-2 14-5 5-4 8-9 8-14 0-3-1-6-3-9 3 0 6-0.5 8-1.5 3-1 5-3 5-5s-3-3-7-3c-2.5 0-5.5 0.5-8.5 1.5 1-3 1.5-5 1.5-8 0-6-2-11-5-15-4-5-10-8-18-8z" fill="currentColor" opacity="0.85"/>
+        <circle cx="40" cy="35" r="4" fill="#60A5FA"/>
+        <circle cx="60" cy="35" r="4" fill="#60A5FA"/>
+      </svg>
+      <span class="brand-name">Kublai</span>
+    </div>
     <div class="sidebar-actions">
+      <ThemeToggle />
       <button
         class="sidebar-btn"
         onclick={openSettingsDialog}
@@ -165,12 +174,22 @@
     flex-shrink: 0;
   }
 
-  .sidebar-title {
-    font-size: 11px;
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brand-logo {
+    color: var(--color-accent);
+    flex-shrink: 0;
+  }
+
+  .brand-name {
+    font-size: 14px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-text-tertiary);
+    color: var(--color-text-primary);
+    letter-spacing: -0.3px;
   }
 
   .sidebar-actions {

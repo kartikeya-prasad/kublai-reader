@@ -8,7 +8,8 @@
     markFeedAllRead,
     loadFeedTree,
   } from "$lib/stores/app.svelte";
-  import { deleteFeed } from "$lib/utils/tauri";
+  import { deleteFeed, updateFeed, getFavicon } from "$lib/utils/tauri";
+  import { onMount } from "svelte";
 
   interface Props {
     feed: FeedWithCount;
@@ -71,6 +72,14 @@
       icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
       action: () => markFeedAllRead(feed.id),
     },
+    {
+      label: feed.auto_parse ? '✓ Auto-Extract Full Text' : 'Auto-Extract Full Text',
+      icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+      action: async () => {
+        await updateFeed(feed.id, { auto_parse: !feed.auto_parse });
+        await loadFeedTree();
+      },
+    },
     { separator: true, label: "", action: () => {} },
     {
       label: "Edit Feed",
@@ -87,6 +96,12 @@
 
   const faviconBg = $derived(getFaviconColor(feed.title));
   const faviconLetter = $derived(getFaviconLetter(feed.title));
+
+  let faviconDataUri = $state<string | null>(null);
+
+  onMount(async () => {
+    faviconDataUri = await getFavicon(feed.id);
+  });
 </script>
 
 <button
@@ -98,7 +113,9 @@
 >
   <!-- Feed Icon -->
   <div class="feed-icon">
-    {#if feed.icon_url}
+    {#if faviconDataUri}
+      <img src={faviconDataUri} alt="" class="feed-icon-img" width="16" height="16" />
+    {:else if feed.icon_url}
       <img
         src={feed.icon_url}
         alt=""
@@ -175,6 +192,13 @@
     height: 16px;
     object-fit: contain;
     border-radius: 3px;
+  }
+
+  .feed-icon-img {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    object-fit: contain;
   }
 
   .feed-letter {

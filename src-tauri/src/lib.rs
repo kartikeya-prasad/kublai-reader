@@ -1,8 +1,10 @@
 mod commands;
 mod db;
+mod favicon;
 mod feed;
 mod reader;
 mod background;
+mod sync;
 
 use db::AppDatabase;
 use tauri::Manager;
@@ -60,6 +62,11 @@ pub fn run() {
             commands::tags::remove_tag_from_article,
             commands::settings::get_setting,
             commands::settings::set_setting,
+            commands::feeds::get_favicon,
+            commands::sync::get_sync_accounts,
+            commands::sync::add_sync_account,
+            commands::sync::remove_sync_account,
+            commands::sync::sync_now,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Kublai Reader");

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Titlebar from "./Titlebar.svelte";
   import Sidebar from "./Sidebar.svelte";
   import ArticleList from "../articles/ArticleList.svelte";
   import ArticleReader from "../reader/ArticleReader.svelte";
@@ -11,9 +10,21 @@
     loadFeedTree,
     loadArticles,
     loadTags,
-    doSearch,
     clearSearch,
+    navigateArticle,
+    toggleArticleStar,
+    markArticleRead,
+    markArticleUnread,
+    toggleArticleReadLater,
+    refreshAll,
+    markFeedAllRead,
+    markFolderAllRead,
+    openSettingsDialog,
+    closeSettingsDialog,
+    closeAddFeedDialog,
+    updateSelectedArticleParsedContent,
   } from "$lib/stores/app.svelte";
+  import { parseArticle } from "$lib/utils/tauri";
 
   const appState = getState();
 
@@ -30,15 +41,90 @@
 
   // Keyboard shortcuts
   function handleKeydown(e: KeyboardEvent) {
-    // Don't handle if in input/textarea
     const tag = (e.target as HTMLElement).tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    const inInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+    // Escape always works
+    if (e.key === "Escape") {
+      if (inInput) return;
+      if (appState.isSearchActive) clearSearch();
+      if (appState.showSettingsDialog) closeSettingsDialog();
+      if (appState.showAddFeedDialog) closeAddFeedDialog();
+      return;
+    }
+
+    if (inInput) return;
 
     switch (e.key) {
-      case "Escape":
-        if (appState.isSearchActive) clearSearch();
+      case "ArrowUp":
+        e.preventDefault();
+        navigateArticle(-1);
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        navigateArticle(1);
+        break;
+      case "r":
+      case "R":
+        if (appState.selectedArticle) {
+          if (appState.selectedArticle.is_read) {
+            markArticleUnread(appState.selectedArticle.id);
+          } else {
+            markArticleRead(appState.selectedArticle.id);
+          }
+        }
+        break;
+      case "s":
+      case "S":
+        if (appState.selectedArticle) toggleArticleStar(appState.selectedArticle.id);
+        break;
+      case "b":
+      case "B":
+        if (appState.selectedArticle) toggleArticleReadLater(appState.selectedArticle.id);
+        break;
+      case "F5":
+        e.preventDefault();
+        refreshAll();
+        break;
+      case "Delete":
+        if (appState.selectedArticle) {
+          markArticleRead(appState.selectedArticle.id);
+          navigateArticle(1);
+        }
         break;
     }
+
+    // W: toggle extraction
+    if ((e.key === "w" || e.key === "W") && appState.selectedArticle) {
+      handleToggleExtraction();
+    }
+
+    // Ctrl+Shift+A: mark all read
+    if (e.ctrlKey && e.shiftKey && e.key === "A") {
+      if (appState.selectedFeed) markFeedAllRead(appState.selectedFeed.id);
+      else if (appState.selectedFolder) markFolderAllRead(appState.selectedFolder.folder.id);
+    }
+
+    // Ctrl+F: focus search
+    if (e.ctrlKey && e.key === "f") {
+      e.preventDefault();
+      const searchInput = document.querySelector<HTMLInputElement>('.article-search-input');
+      searchInput?.focus();
+    }
+
+    // Ctrl+,: open settings
+    if (e.ctrlKey && e.key === ",") {
+      e.preventDefault();
+      openSettingsDialog();
+    }
+  }
+
+  async function handleToggleExtraction() {
+    if (!appState.selectedArticle) return;
+    try {
+      const parsed = await parseArticle(appState.selectedArticle.id);
+      updateSelectedArticleParsedContent(parsed);
+    } catch {}
   }
 
   function startResizeSidebar(e: MouseEvent) {
@@ -73,21 +159,11 @@
     window.addEventListener("mouseup", onUp);
   }
 
-  async function handleSearch(query: string) {
-    if (query.trim()) {
-      await doSearch(query);
-    } else {
-      await clearSearch();
-      await loadArticles(0, false);
-    }
-  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="app-shell">
-  <Titlebar onsearch={handleSearch} />
-
   <div class="main-content">
     <!-- Left Pane: Feed Sidebar -->
     <div class="pane sidebar-pane" style="width: {sidebarWidth}px">
@@ -159,7 +235,7 @@
   }
 
   .sidebar-pane {
-    background: var(--color-bg-surface);
+    background: var(--color-bg-sidebar);
     border-right: 1px solid var(--color-divider);
     flex-shrink: 0;
   }

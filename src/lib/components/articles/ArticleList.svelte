@@ -13,8 +13,10 @@
     setArticleView,
     refreshAll,
     loadArticles,
+    doSearch,
+    clearSearch,
   } from "$lib/stores/app.svelte";
-  import { markAboveRead } from "$lib/utils/tauri";
+  import { markAboveRead, parseArticle } from "$lib/utils/tauri";
   import { open as openUrl } from "@tauri-apps/plugin-shell";
 
   const appState = getState();
@@ -151,6 +153,27 @@
     }
   }
 
+  let searchValue = $state('');
+  let searchInputEl = $state<HTMLInputElement | null>(null);
+
+  async function handleSearchInput() {
+    if (searchValue.trim()) {
+      await doSearch(searchValue);
+    } else {
+      await clearSearch();
+      await loadArticles(0, false);
+    }
+  }
+
+  function handleSearchKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      searchValue = '';
+      clearSearch();
+      loadArticles(0, false);
+      searchInputEl?.blur();
+    }
+  }
+
   let menuItems = $derived.by(() => {
     if (!menuArticle) return [];
     const a = menuArticle;
@@ -192,6 +215,22 @@
         action: () => openInBrowser(a.url),
         disabled: !a.url,
       },
+      {
+        label: 'Copy Link',
+        icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+        action: () => { if (a.url) navigator.clipboard.writeText(a.url); },
+        disabled: !a.url,
+      },
+      {
+        label: a.has_parsed_content ? 'Remove Extracted Text' : 'Extract Full Text',
+        icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
+        action: async () => {
+          if (!a.has_parsed_content) {
+            try { await parseArticle(a.id); } catch {}
+          }
+        },
+      },
+      { separator: true, label: '', action: () => {} },
     ];
   });
 </script>
@@ -210,12 +249,13 @@
     <div class="header-actions">
       <button
         class="icon-btn"
-        class:active={appState.articleView === "compact"}
-        onclick={() => setArticleView(appState.articleView === "card" ? "compact" : "card")}
-        title={appState.articleView === "card" ? "Switch to compact view" : "Switch to card view"}
+        class:active={appState.articleView !== "card"}
+        onclick={() => setArticleView(appState.articleView === "card" ? "compact" : appState.articleView === "compact" ? "magazine" : "card")}
+        title={appState.articleView === "card" ? "Switch to compact view" : appState.articleView === "compact" ? "Switch to magazine view" : "Switch to card view"}
         aria-label="Toggle view"
       >
         {#if appState.articleView === "card"}
+          <!-- card icon: list -->
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="8" y1="6" x2="21" y2="6"/>
             <line x1="8" y1="12" x2="21" y2="12"/>
@@ -224,7 +264,16 @@
             <line x1="3" y1="12" x2="3.01" y2="12"/>
             <line x1="3" y1="18" x2="3.01" y2="18"/>
           </svg>
+        {:else if appState.articleView === "compact"}
+          <!-- compact icon: tighter list -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="5" x2="21" y2="5"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="3" y1="15" x2="21" y2="15"/>
+            <line x1="3" y1="20" x2="21" y2="20"/>
+          </svg>
         {:else}
+          <!-- magazine icon: grid -->
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"/>
             <rect x="14" y="3" width="7" height="7"/>
@@ -247,6 +296,25 @@
         </svg>
       </button>
     </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input
+      bind:this={searchInputEl}
+      bind:value={searchValue}
+      class="article-search-input"
+      type="text"
+      placeholder="Search articles…"
+      oninput={handleSearchInput}
+      onkeydown={handleSearchKeydown}
+    />
+    {#if searchValue}
+      <button class="search-clear" onclick={() => { searchValue = ''; clearSearch(); loadArticles(0,false); }}>×</button>
+    {/if}
   </div>
 
   <!-- Article List -->
@@ -293,96 +361,129 @@
         {/if}
       </div>
     {:else}
-      <!-- Article items -->
-      {#each appState.displayedArticles as article (article.id)}
-        {#if appState.articleView === "card"}
-          <!-- Card View -->
-          <button
-            class="article-card"
-            class:unread={!article.is_read}
-            class:selected={appState.selectedArticleListItem?.id === article.id}
-            data-article-id={article.id}
-            onclick={() => selectArticle(article)}
-            oncontextmenu={(e) => openContextMenu(e, article)}
-          >
-            {#if !article.is_read}
-              <div class="unread-indicator"></div>
-            {/if}
-
-            <div class="card-body">
-              <div class="card-meta">
-                <span class="feed-name">{article.feed_title}</span>
-                <span class="article-date">{formatDate(article.published_at)}</span>
-              </div>
-              <h3 class="article-title">{article.title}</h3>
-              {#if article.summary}
-                <p class="article-excerpt">{article.summary}</p>
+      <!-- Article items: card and compact views -->
+      {#if appState.articleView !== "magazine"}
+        {#each appState.displayedArticles as article (article.id)}
+          {#if appState.articleView === "card"}
+            <!-- Card View -->
+            <button
+              class="article-card"
+              class:unread={!article.is_read}
+              class:selected={appState.selectedArticleListItem?.id === article.id}
+              data-article-id={article.id}
+              onclick={() => selectArticle(article)}
+              oncontextmenu={(e) => openContextMenu(e, article)}
+            >
+              {#if !article.is_read}
+                <div class="unread-indicator"></div>
               {/if}
-              <div class="card-footer">
-                {#if article.author}
-                  <span class="author">{article.author}</span>
+
+              <div class="card-body">
+                <div class="card-meta">
+                  <span class="feed-name">{article.feed_title}</span>
+                  <span class="article-date">{formatDate(article.published_at)}</span>
+                </div>
+                <h3 class="article-title">{article.title}</h3>
+                {#if article.summary}
+                  <p class="article-excerpt">{article.summary}</p>
                 {/if}
-                <div class="card-indicators">
-                  {#if article.is_starred}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" class="star-icon">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
+                <div class="card-footer">
+                  {#if article.author}
+                    <span class="author">{article.author}</span>
                   {/if}
-                  {#if article.is_read_later}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" class="later-icon">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  <div class="card-indicators">
+                    {#if article.is_starred}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" class="star-icon">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                    {/if}
+                    {#if article.is_read_later}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" class="later-icon">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    {/if}
+                  </div>
+                </div>
+              </div>
+
+              {#if article.thumbnail_url}
+                <div class="card-thumbnail">
+                  <img
+                    src={article.thumbnail_url}
+                    alt=""
+                    loading="lazy"
+                    onerror={(e) => { (e.currentTarget as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                  />
+                </div>
+              {/if}
+            </button>
+          {:else}
+            <!-- Compact View -->
+            <button
+              class="article-compact"
+              class:unread={!article.is_read}
+              class:selected={appState.selectedArticleListItem?.id === article.id}
+              data-article-id={article.id}
+              onclick={() => selectArticle(article)}
+              oncontextmenu={(e) => openContextMenu(e, article)}
+            >
+              {#if !article.is_read}
+                <div class="unread-dot"></div>
+              {:else}
+                <div class="read-dot"></div>
+              {/if}
+              <div class="compact-body">
+                <span class="compact-title">{article.title}</span>
+                <div class="compact-meta">
+                  <span class="feed-name">{article.feed_title}</span>
+                  <span class="bullet">·</span>
+                  <span class="article-date">{formatDate(article.published_at)}</span>
+                  {#if article.is_starred}
+                    <span class="bullet">·</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="star-icon">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
                   {/if}
                 </div>
               </div>
-            </div>
+            </button>
+          {/if}
+        {/each}
 
-            {#if article.thumbnail_url}
-              <div class="card-thumbnail">
-                <img
-                  src={article.thumbnail_url}
-                  alt=""
-                  loading="lazy"
-                  onerror={(e) => { (e.currentTarget as HTMLImageElement).parentElement!.style.display = 'none'; }}
-                />
+        <!-- Load more sentinel -->
+        <div bind:this={sentinelEl} class="scroll-sentinel"></div>
+      {:else}
+        <!-- Magazine View -->
+        <div class="magazine-grid">
+          {#each appState.displayedArticles as article (article.id)}
+            <button
+              class="magazine-card"
+              class:selected={appState.selectedArticleListItem?.id === article.id}
+              data-article-id={article.id}
+              onclick={() => selectArticle(article)}
+              oncontextmenu={(e) => openContextMenu(e, article)}
+            >
+              {#if article.thumbnail_url}
+                <div class="mag-thumbnail">
+                  <img src={article.thumbnail_url} alt="" loading="lazy" />
+                </div>
+              {:else}
+                <div class="mag-thumbnail mag-no-thumb">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m3 9 4-4 4 4 4-6 6 6"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+                </div>
+              {/if}
+              <div class="mag-body">
+                <div class="mag-feed">{article.feed_title}</div>
+                <div class="mag-title" class:unread={!article.is_read}>{article.title}</div>
+                <div class="mag-meta">{formatDate(article.published_at)}</div>
               </div>
-            {/if}
-          </button>
-        {:else}
-          <!-- Compact View -->
-          <button
-            class="article-compact"
-            class:unread={!article.is_read}
-            class:selected={appState.selectedArticleListItem?.id === article.id}
-            data-article-id={article.id}
-            onclick={() => selectArticle(article)}
-            oncontextmenu={(e) => openContextMenu(e, article)}
-          >
-            {#if !article.is_read}
-              <div class="unread-dot"></div>
-            {:else}
-              <div class="read-dot"></div>
-            {/if}
-            <div class="compact-body">
-              <span class="compact-title">{article.title}</span>
-              <div class="compact-meta">
-                <span class="feed-name">{article.feed_title}</span>
-                <span class="bullet">·</span>
-                <span class="article-date">{formatDate(article.published_at)}</span>
-                {#if article.is_starred}
-                  <span class="bullet">·</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="star-icon">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                  </svg>
-                {/if}
-              </div>
-            </div>
-          </button>
-        {/if}
-      {/each}
+            </button>
+          {/each}
+        </div>
 
-      <!-- Load more sentinel -->
-      <div bind:this={sentinelEl} class="scroll-sentinel"></div>
+        <!-- Load more sentinel for magazine -->
+        <div bind:this={sentinelEl} class="scroll-sentinel"></div>
+      {/if}
 
       {#if appState.isLoadingArticles}
         <div class="load-more-indicator">
@@ -482,6 +583,47 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--color-divider);
+    background: var(--color-bg-base);
+    flex-shrink: 0;
+  }
+
+  .search-icon {
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .article-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    color: var(--color-text-primary);
+    outline: none;
+    font-family: inherit;
+  }
+
+  .article-search-input::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  .search-clear {
+    background: none;
+    border: none;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+  }
+
+  .search-clear:hover { color: var(--color-text-primary); }
 
   .article-list {
     flex: 1;
@@ -797,5 +939,95 @@
     border-top-color: var(--color-accent);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
+  }
+
+  /* ===== Magazine View ===== */
+  .magazine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+    padding: 10px;
+    overflow-y: auto;
+  }
+
+  .magazine-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    text-align: left;
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+    width: 100%;
+  }
+
+  .magazine-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .magazine-card.selected {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent-soft);
+  }
+
+  .mag-thumbnail {
+    width: 100%;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--color-bg-hover);
+  }
+
+  .mag-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .mag-no-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mag-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mag-feed {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mag-title {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
+  }
+
+  .mag-title.unread {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .mag-meta {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
   }
 </style>

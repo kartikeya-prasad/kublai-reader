@@ -4,6 +4,11 @@ use crate::feed;
 use tauri::State;
 
 #[tauri::command]
+pub async fn get_favicon(feed_id: i64, db: State<'_, AppDatabase>) -> Result<Option<String>, String> {
+    crate::favicon::fetcher::get_favicon_data_uri(feed_id, &db)
+}
+
+#[tauri::command]
 pub async fn add_feed(
     url: String,
     folder_id: Option<i64>,
@@ -51,7 +56,7 @@ pub async fn add_feed(
 
     // Return the created feed
     let feed = conn.query_row(
-        "SELECT id, folder_id, title, url, site_url, description, icon_url, auto_parse, update_interval, etag, last_modified, last_fetched, created_at FROM feeds WHERE id = ?1",
+        "SELECT id, folder_id, title, url, site_url, description, icon_url, favicon_id, sync_id, auto_parse, update_interval, etag, last_modified, last_fetched, created_at FROM feeds WHERE id = ?1",
         [feed_id],
         |row| {
             Ok(Feed {
@@ -62,12 +67,14 @@ pub async fn add_feed(
                 site_url: row.get(4)?,
                 description: row.get(5)?,
                 icon_url: row.get(6)?,
-                auto_parse: row.get::<_, i64>(7)? != 0,
-                update_interval: row.get(8)?,
-                etag: row.get(9)?,
-                last_modified: row.get(10)?,
-                last_fetched: row.get(11)?,
-                created_at: row.get(12)?,
+                favicon_id: row.get(7)?,
+                sync_id: row.get(8)?,
+                auto_parse: row.get::<_, i64>(9)? != 0,
+                update_interval: row.get(10)?,
+                etag: row.get(11)?,
+                last_modified: row.get(12)?,
+                last_fetched: row.get(13)?,
+                created_at: row.get(14)?,
             })
         },
     ).map_err(|e| e.to_string())?;
@@ -99,7 +106,7 @@ pub async fn get_feeds(db: State<'_, AppDatabase>) -> Result<FeedTree, String> {
     // Get all feeds with unread counts
     let mut feed_stmt = conn.prepare(
         "SELECT f.id, f.folder_id, f.title, f.url, f.site_url, f.description, f.icon_url,
-                f.auto_parse, f.update_interval, f.etag, f.last_modified, f.last_fetched, f.created_at,
+                f.favicon_id, f.sync_id, f.auto_parse, f.update_interval, f.etag, f.last_modified, f.last_fetched, f.created_at,
                 COUNT(a.id) as total_count,
                 COUNT(CASE WHEN a.is_read = 0 THEN 1 END) as unread_count
          FROM feeds f
@@ -118,15 +125,17 @@ pub async fn get_feeds(db: State<'_, AppDatabase>) -> Result<FeedTree, String> {
                 site_url: row.get(4)?,
                 description: row.get(5)?,
                 icon_url: row.get(6)?,
-                auto_parse: row.get::<_, i64>(7)? != 0,
-                update_interval: row.get(8)?,
-                etag: row.get(9)?,
-                last_modified: row.get(10)?,
-                last_fetched: row.get(11)?,
-                created_at: row.get(12)?,
+                favicon_id: row.get(7)?,
+                sync_id: row.get(8)?,
+                auto_parse: row.get::<_, i64>(9)? != 0,
+                update_interval: row.get(10)?,
+                etag: row.get(11)?,
+                last_modified: row.get(12)?,
+                last_fetched: row.get(13)?,
+                created_at: row.get(14)?,
             },
-            total_count: row.get(13)?,
-            unread_count: row.get(14)?,
+            total_count: row.get(15)?,
+            unread_count: row.get(16)?,
         })
     }).map_err(|e| e.to_string())?
     .filter_map(|r| r.ok())
@@ -247,6 +256,8 @@ pub async fn refresh_feed(
                 is_read: false,
                 is_starred: false,
                 is_read_later: false,
+                sync_id: None,
+                content_cached_at: None,
                 created_at: String::new(),
             });
         }
@@ -313,7 +324,7 @@ pub async fn update_feed(
     }
 
     conn.query_row(
-        "SELECT id, folder_id, title, url, site_url, description, icon_url, auto_parse, update_interval, etag, last_modified, last_fetched, created_at FROM feeds WHERE id = ?1",
+        "SELECT id, folder_id, title, url, site_url, description, icon_url, favicon_id, sync_id, auto_parse, update_interval, etag, last_modified, last_fetched, created_at FROM feeds WHERE id = ?1",
         [feed_id],
         |row| {
             Ok(Feed {
@@ -324,12 +335,14 @@ pub async fn update_feed(
                 site_url: row.get(4)?,
                 description: row.get(5)?,
                 icon_url: row.get(6)?,
-                auto_parse: row.get::<_, i64>(7)? != 0,
-                update_interval: row.get(8)?,
-                etag: row.get(9)?,
-                last_modified: row.get(10)?,
-                last_fetched: row.get(11)?,
-                created_at: row.get(12)?,
+                favicon_id: row.get(7)?,
+                sync_id: row.get(8)?,
+                auto_parse: row.get::<_, i64>(9)? != 0,
+                update_interval: row.get(10)?,
+                etag: row.get(11)?,
+                last_modified: row.get(12)?,
+                last_fetched: row.get(13)?,
+                created_at: row.get(14)?,
             })
         },
     ).map_err(|e| e.to_string())

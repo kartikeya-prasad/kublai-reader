@@ -23,6 +23,7 @@ import {
   refreshAllFeeds,
   searchArticles,
   getTags,
+  getFavicon,
 } from "$lib/utils/tauri";
 
 // ===== State =====
@@ -67,6 +68,9 @@ let searchResults = $state<ArticleListItem[]>([]);
 
 let showAddFeedDialog = $state(false);
 let showSettingsDialog = $state(false);
+
+let selectedArticleIndex = $state(-1);
+let faviconCache = $state(new Map<number, string>());
 
 // ===== Derived state =====
 
@@ -169,6 +173,7 @@ export async function selectArticle(item: ArticleListItem): Promise<void> {
   try {
     const article = await getArticle(item.id);
     selectedArticle = article;
+    selectedArticleIndex = displayedArticles.findIndex(a => a.id === article.id);
     // Mark as read
     if (!item.is_read) {
       await markArticleRead(item.id);
@@ -347,6 +352,22 @@ export function closeSettingsDialog(): void {
   showSettingsDialog = false;
 }
 
+export function navigateArticle(delta: number): void {
+  const articles = displayedArticles;
+  if (!articles.length) return;
+  const newIndex = Math.max(0, Math.min(articles.length - 1, selectedArticleIndex + delta));
+  if (newIndex !== selectedArticleIndex) {
+    selectArticle(articles[newIndex]);
+  }
+}
+
+export async function getFaviconCached(feedId: number): Promise<string | null> {
+  if (faviconCache.has(feedId)) return faviconCache.get(feedId) ?? null;
+  const uri = await getFavicon(feedId);
+  if (uri) faviconCache.set(feedId, uri);
+  return uri ?? null;
+}
+
 // ===== Helpers =====
 
 function getFilterString(filter: ArticleFilter): string {
@@ -384,5 +405,7 @@ export function getState() {
     get currentPaneTitle() { return currentPaneTitle; },
     get showAddFeedDialog() { return showAddFeedDialog; },
     get showSettingsDialog() { return showSettingsDialog; },
+    get selectedArticleIndex() { return selectedArticleIndex; },
+    get faviconCache() { return faviconCache; },
   };
 }

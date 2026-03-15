@@ -74,7 +74,7 @@ export interface Tag {
 
 // ===== UI State Types =====
 
-export type ArticleView = "card" | "compact";
+export type ArticleView = "card" | "compact" | "magazine";
 export type ThemeMode = "light" | "dark" | "auto";
 export type ArticleFilter =
   | "all"
@@ -95,6 +95,22 @@ export interface ArticlePage {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface SyncAccount {
+  id: number;
+  provider: string;
+  server_url: string;
+  username: string;
+  auth_token: string | null;
+  last_synced: string | null;
+  created_at: string;
+}
+
+export interface SyncResult {
+  feeds_synced: number;
+  entries_synced: number;
+  errors: string[];
 }
 
 // ===== Feed Tree =====

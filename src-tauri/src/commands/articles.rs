@@ -118,7 +118,8 @@ pub async fn get_article(article_id: i64, db: State<'_, AppDatabase>) -> Result<
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.query_row(
         "SELECT id, feed_id, guid, title, url, author, summary, content, parsed_content,
-                thumbnail_url, published_at, is_read, is_starred, is_read_later, created_at
+                thumbnail_url, published_at, is_read, is_starred, is_read_later, sync_id,
+                content_cached_at, created_at
          FROM articles WHERE id = ?1",
         [article_id],
         |row| {
@@ -137,7 +138,9 @@ pub async fn get_article(article_id: i64, db: State<'_, AppDatabase>) -> Result<
                 is_read: row.get::<_, i64>(11)? != 0,
                 is_starred: row.get::<_, i64>(12)? != 0,
                 is_read_later: row.get::<_, i64>(13)? != 0,
-                created_at: row.get(14)?,
+                sync_id: row.get(14)?,
+                content_cached_at: row.get(15)?,
+                created_at: row.get(16)?,
             })
         },
     ).map_err(|e| e.to_string())
