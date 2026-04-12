@@ -258,6 +258,7 @@ pub async fn refresh_feed(
                 is_read_later: false,
                 sync_id: None,
                 content_cached_at: None,
+                ai_summary: None,
                 created_at: String::new(),
             });
         }

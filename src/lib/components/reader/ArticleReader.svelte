@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getState, toggleArticleStar, toggleArticleReadLater, updateReaderSettings, updateSelectedArticleParsedContent } from "$lib/stores/app.svelte";
+  import { getState, toggleArticleStar, toggleArticleReadLater, updateReaderSettings, updateSelectedArticleParsedContent, fetchAiSummary, clearAiSummary } from "$lib/stores/app.svelte";
   import { parseArticle, addTagToArticle, removeTagFromArticle, createTag } from "$lib/utils/tauri";
   import { open as openUrl } from "@tauri-apps/plugin-shell";
 
@@ -33,6 +33,16 @@
   let listItem = $derived(appState.selectedArticleListItem);
   let settings = $derived(appState.readerSettings);
   let tags = $derived(appState.tags);
+
+  let aiSummary = $derived(appState.aiSummary);
+  let isLoadingSummary = $derived(appState.isLoadingSummary);
+  let summaryError = $derived(appState.summaryError);
+  let showSummary = $state(false);
+
+  $effect(() => {
+    // Auto-show summary panel when summary loads
+    if (aiSummary) showSummary = true;
+  });
 
   // The content to display
   let displayContent = $derived(
@@ -197,6 +207,25 @@
           {/if}
         </button>
 
+        <!-- AI Summary -->
+        <button
+          class="tool-btn"
+          class:active={showSummary}
+          class:loading={isLoadingSummary}
+          onclick={() => { if (article) fetchAiSummary(article.id); showSummary = true; }}
+          title="AI Summary (A)"
+          aria-label="AI Summary"
+          disabled={isLoadingSummary}
+        >
+          {#if isLoadingSummary}
+            <div class="btn-spinner"></div>
+          {:else}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+            </svg>
+          {/if}
+        </button>
+
         <!-- Open in Browser -->
         <button
           class="tool-btn"
@@ -327,6 +356,32 @@
             Add
           </button>
         </div>
+      </div>
+    {/if}
+
+    <!-- AI Summary Panel -->
+    {#if showSummary || isLoadingSummary || summaryError}
+      <div class="ai-summary-panel">
+        <div class="ai-summary-header">
+          <div class="ai-summary-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+            </svg>
+            <span>AI Summary</span>
+          </div>
+          <button class="ai-close" onclick={() => { showSummary = false; clearAiSummary(); }} aria-label="Close summary">×</button>
+        </div>
+        {#if isLoadingSummary}
+          <div class="ai-loading">
+            <div class="ai-skeleton"></div>
+            <div class="ai-skeleton" style="width: 80%"></div>
+            <div class="ai-skeleton" style="width: 60%"></div>
+          </div>
+        {:else if summaryError}
+          <p class="ai-error">{summaryError}</p>
+        {:else if aiSummary}
+          <p class="ai-text">{aiSummary}</p>
+        {/if}
       </div>
     {/if}
 
@@ -720,6 +775,85 @@
   }
 
   /* ===== Parse Error ===== */
+  /* ===== AI Summary Panel ===== */
+  .ai-summary-panel {
+    margin: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-accent-soft);
+    background: var(--color-accent-soft);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .ai-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-accent-soft);
+  }
+
+  .ai-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-accent);
+  }
+
+  .ai-close {
+    background: none;
+    border: none;
+    color: var(--color-text-tertiary);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.12s;
+  }
+
+  .ai-close:hover {
+    color: var(--color-text-primary);
+  }
+
+  .ai-text {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+  }
+
+  .ai-error {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--color-danger);
+  }
+
+  .ai-loading {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ai-skeleton {
+    height: 12px;
+    border-radius: 4px;
+    background: var(--color-bg-hover);
+    animation: ai-pulse 1.5s ease infinite;
+    width: 100%;
+  }
+
+  @keyframes ai-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.2; }
+  }
+
   .parse-error {
     display: flex;
     align-items: center;

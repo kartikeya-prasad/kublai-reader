@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod articles;
 pub mod feeds;
 pub mod folders;

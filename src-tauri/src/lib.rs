@@ -32,6 +32,14 @@ pub fn run() {
                 background::scheduler::run(handle).await;
             });
 
+            // Extract pending articles for auto_parse feeds on startup
+            let handle2 = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                // Small delay to let the app UI settle first
+                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                background::startup::extract_pending_articles(handle2).await;
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -67,6 +75,7 @@ pub fn run() {
             commands::sync::add_sync_account,
             commands::sync::remove_sync_account,
             commands::sync::sync_now,
+            commands::ai::summarize_article,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Kublai Reader");

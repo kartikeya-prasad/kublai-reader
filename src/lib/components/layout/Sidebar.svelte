@@ -25,12 +25,44 @@
 </script>
 
 <div class="sidebar">
-  <div class="sidebar-header">
+  <div class="sidebar-header" data-tauri-drag-region>
     <div class="sidebar-brand">
-      <svg class="brand-logo" width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M50 15c-8 0-14 3-18 8-3 4-5 9-5 15 0 3 0.5 5 1.5 8-3-1-6-1.5-8.5-1.5-4 0-7 1-7 3s2 4 5 5c2 1 5 1.5 8 1.5-2 3-3 6-3 9 0 5 3 10 8 14 4 3 9 5 14 5h10c5 0 10-2 14-5 5-4 8-9 8-14 0-3-1-6-3-9 3 0 6-0.5 8-1.5 3-1 5-3 5-5s-3-3-7-3c-2.5 0-5.5 0.5-8.5 1.5 1-3 1.5-5 1.5-8 0-6-2-11-5-15-4-5-10-8-18-8z" fill="currentColor" opacity="0.85"/>
-        <circle cx="40" cy="35" r="4" fill="#60A5FA"/>
-        <circle cx="60" cy="35" r="4" fill="#60A5FA"/>
+      <svg class="brand-logo" width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="semi-top-sb">
+            <rect x="0" y="0" width="100" height="50"/>
+          </clipPath>
+        </defs>
+        <rect width="100" height="100" fill="#111111"/>
+        <circle cx="50" cy="50" r="38" fill="#1a1008" clip-path="url(#semi-top-sb)"/>
+        <path d="M50,50 L18,22 A38,38 0 0,1 36,13 Z" fill="#EA580C" clip-path="url(#semi-top-sb)"/>
+        <path d="M50,50 L36,13 A38,38 0 0,1 50,12 Z" fill="#F59E0B" clip-path="url(#semi-top-sb)"/>
+        <path d="M50,50 L50,12 A38,38 0 0,1 64,13 Z" fill="#CA8A04" clip-path="url(#semi-top-sb)"/>
+        <path d="M50,50 L64,13 A38,38 0 0,1 82,22 Z" fill="#16A34A" clip-path="url(#semi-top-sb)"/>
+        <path d="M50,50 L82,22 A38,38 0 0,1 88,50 Z" fill="#3B82F6" clip-path="url(#semi-top-sb)"/>
+        <path d="M50,50 L12,50 A38,38 0 0,1 18,22 Z" fill="#DC2626" clip-path="url(#semi-top-sb)"/>
+        <circle cx="50" cy="50" r="8" fill="#F59E0B" clip-path="url(#semi-top-sb)"/>
+        <circle cx="50" cy="50" r="8" fill="none" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="18" y2="22" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="36" y2="13" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="50" y2="12" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="64" y2="13" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="82" y2="22" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="88" y2="50" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <line x1="50" y1="50" x2="12" y2="50" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top-sb)"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#111111" stroke-width="2.5" clip-path="url(#semi-top-sb)"/>
+        <rect x="10" y="48.5" width="80" height="3" fill="#111111"/>
+        <ellipse cx="50" cy="79" rx="16" ry="14" fill="#111111"/>
+        <ellipse cx="50" cy="60" rx="13" ry="12" fill="#111111"/>
+        <polygon points="38,52 35,40 45,50" fill="#111111"/>
+        <polygon points="62,52 65,40 55,50" fill="#111111"/>
+        <path d="M 36 88 Q 22 92 20 80 Q 18 68 32 70" fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round"/>
+        <ellipse cx="44" cy="59" rx="3.5" ry="3" fill="#F59E0B"/>
+        <ellipse cx="56" cy="59" rx="3.5" ry="3" fill="#F59E0B"/>
+        <ellipse cx="44" cy="59" rx="1.2" ry="2.5" fill="#111111"/>
+        <ellipse cx="56" cy="59" rx="1.2" ry="2.5" fill="#111111"/>
+        <circle cx="42.5" cy="57.5" r="0.8" fill="white" opacity="0.8"/>
+        <circle cx="54.5" cy="57.5" r="0.8" fill="white" opacity="0.8"/>
       </svg>
       <span class="brand-name">Kublai</span>
     </div>
@@ -170,7 +202,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 10px 10px 14px;
+    padding: 11px 10px 11px 14px;
+    min-height: 40px;
     flex-shrink: 0;
   }
 
@@ -181,8 +214,9 @@
   }
 
   .brand-logo {
-    color: var(--color-accent);
     flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
   }
 
   .brand-name {

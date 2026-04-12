@@ -59,6 +59,7 @@
     { key: 'Enter', action: 'Open article' },
     { key: 'Space', action: 'Page down in reader' },
     { key: 'W', action: 'Toggle full-text extraction' },
+    { key: 'A', action: 'AI summary' },
     { key: 'R', action: 'Toggle read/unread' },
     { key: 'S', action: 'Star/unstar' },
     { key: 'B', action: 'Bookmark/read later' },
@@ -71,13 +72,37 @@
     { key: 'Esc', action: 'Close / clear search' },
   ];
 
+  // AI / OpenRouter settings
+  let openrouterKey = $state('');
+  let openrouterModel = $state('anthropic/claude-haiku-4-5');
+  let aiSaveStatus = $state<string | null>(null);
+
+  const AI_MODEL_OPTIONS = [
+    { label: 'Claude Haiku (fast)', value: 'anthropic/claude-haiku-4-5' },
+    { label: 'Claude Sonnet', value: 'anthropic/claude-sonnet-4-5' },
+    { label: 'GPT-4o Mini', value: 'openai/gpt-4o-mini' },
+    { label: 'Gemini Flash', value: 'google/gemini-flash-1.5' },
+  ];
+
   onMount(async () => {
     const days = await getSetting('cache_max_days');
     const perFeed = await getSetting('cache_max_per_feed');
     if (days) cacheMaxDays = parseInt(days);
     if (perFeed) cacheMaxPerFeed = parseInt(perFeed);
     syncAccounts = await getSyncAccounts();
+
+    const key = await getSetting('openrouter_api_key');
+    const model = await getSetting('openrouter_model');
+    if (key) openrouterKey = key;
+    if (model) openrouterModel = model;
   });
+
+  async function saveAiSettings() {
+    await setSetting('openrouter_api_key', openrouterKey);
+    await setSetting('openrouter_model', openrouterModel);
+    aiSaveStatus = 'Saved!';
+    setTimeout(() => { aiSaveStatus = null; }, 2000);
+  }
 
   async function saveCacheSettings() {
     await setSetting('cache_max_days', String(cacheMaxDays));
@@ -391,6 +416,42 @@
         {:else}
           <button class="btn-secondary add-sync-btn" onclick={() => showAddSync = true}>+ Add Sync Account</button>
         {/if}
+      </section>
+
+      <!-- AI -->
+      <section class="settings-section">
+        <h3 class="section-title">AI Summary (OpenRouter)</h3>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">API Key</span>
+            <span class="setting-desc">Your OpenRouter API key from openrouter.ai</span>
+          </div>
+          <input
+            type="password"
+            class="ai-input"
+            bind:value={openrouterKey}
+            placeholder="sk-or-v1-..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">Model</span>
+            <span class="setting-desc">Which AI model to use for summaries</span>
+          </div>
+          <select class="ai-select" bind:value={openrouterModel}>
+            {#each AI_MODEL_OPTIONS as opt}
+              <option value={opt.value}>{opt.label}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="ai-save-row">
+          <button class="ai-save-btn" onclick={saveAiSettings}>Save AI Settings</button>
+          {#if aiSaveStatus}
+            <span class="ai-save-status">{aiSaveStatus}</span>
+          {/if}
+        </div>
+        <p class="ai-hint">Press <kbd>A</kbd> while reading an article to generate a summary.</p>
       </section>
 
       <!-- OPML -->
@@ -919,6 +980,69 @@
 
   .spinning {
     animation: spin 1s linear infinite;
+  }
+
+  /* ===== AI Settings ===== */
+  .ai-input, .ai-select {
+    width: 100%;
+    max-width: 260px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  .ai-input:focus, .ai-select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  .ai-save-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .ai-save-btn {
+    padding: 7px 16px;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .ai-save-btn:hover {
+    background: var(--color-accent-hover);
+  }
+
+  .ai-save-status {
+    font-size: 12px;
+    color: var(--color-success);
+    font-weight: 500;
+  }
+
+  .ai-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+  }
+
+  .ai-hint kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-bg-hover);
+    font-family: monospace;
+    font-size: 11px;
   }
 
   /* ===== OPML ===== */

@@ -1,3 +1,4 @@
+use crate::reader;
 use tauri::{AppHandle, Emitter, Manager};
 use std::time::Duration;
 
@@ -14,24 +15,24 @@ pub async fn run(app: AppHandle) {
             None => continue,
         };
 
-        // Get feeds that need refreshing
-        let feeds_to_refresh: Vec<(i64, String)> = {
+        // Get feeds that need refreshing (id, url, auto_parse)
+        let feeds_to_refresh: Vec<(i64, String, bool)> = {
             let Ok(conn) = db.conn.lock() else { continue };
             let Ok(mut stmt) = conn.prepare(
-                "SELECT id, url FROM feeds
+                "SELECT id, url, auto_parse FROM feeds
                  WHERE last_fetched IS NULL
                     OR (strftime('%s', 'now') - strftime('%s', last_fetched)) > update_interval
                  ORDER BY last_fetched ASC
                  LIMIT 10"
             ) else { continue };
             let Ok(rows) = stmt.query_map([], |row| {
-                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, bool>(2)?))
             }) else { continue };
-            let result: Vec<(i64, String)> = rows.filter_map(|r| r.ok()).collect();
+            let result: Vec<(i64, String, bool)> = rows.filter_map(|r| r.ok()).collect();
             result
         };
 
-        for (feed_id, _url) in feeds_to_refresh {
+        for (feed_id, _url, auto_parse) in feeds_to_refresh {
             let db = match app.try_state::<crate::db::AppDatabase>() {
                 Some(db) => db,
                 None => continue,
@@ -67,6 +68,8 @@ pub async fn run(app: AppHandle) {
                     );
 
                     let mut new_count = 0i64;
+                    let mut new_articles_for_parse: Vec<(i64, String)> = Vec::new();
+
                     for entry in &parsed.entries {
                         let guid = entry.id.clone();
                         let title = entry.title.as_ref().map(|t| t.content.clone()).unwrap_or_default();
@@ -85,8 +88,40 @@ pub async fn run(app: AppHandle) {
                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                             rusqlite::params![feed_id, guid, title, url, author, summary, content, thumbnail, published],
                         ) {
-                            new_count += n as i64;
+                            if n > 0 {
+                                new_count += 1;
+                                // If auto_parse, collect the new article id + url for extraction
+                                if auto_parse {
+                                    let article_id = conn.last_insert_rowid();
+                                    if let Some(article_url) = url.clone() {
+                                        if !article_url.is_empty() {
+                                            new_articles_for_parse.push((article_id, article_url));
+                                        }
+                                    }
+                                }
+                            }
                         }
+                    }
+
+                    // Spawn background extraction for auto_parse feeds (max 3 per cycle)
+                    if !new_articles_for_parse.is_empty() {
+                        let articles_to_extract = new_articles_for_parse.into_iter().take(3).collect::<Vec<_>>();
+                        let app_clone = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            for (article_id, url) in articles_to_extract {
+                                if let Ok(content) = reader::fetch_and_extract(&url).await {
+                                    if let Some(db) = app_clone.try_state::<crate::db::AppDatabase>() {
+                                        if let Ok(conn) = db.conn.lock() {
+                                            let _ = conn.execute(
+                                                "UPDATE articles SET parsed_content = ?1 WHERE id = ?2",
+                                                rusqlite::params![content, article_id],
+                                            );
+                                        }
+                                    }
+                                }
+                                tokio::time::sleep(Duration::from_millis(500)).await;
+                            }
+                        });
                     }
 
                     if new_count > 0 {

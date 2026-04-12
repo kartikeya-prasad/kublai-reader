@@ -1,6 +1,6 @@
 use rusqlite::Connection;
 
-const CURRENT_VERSION: i32 = 2;
+const CURRENT_VERSION: i32 = 3;
 
 pub fn run_migrations(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
     let version: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
@@ -13,7 +13,22 @@ pub fn run_migrations(conn: &Connection) -> Result<(), Box<dyn std::error::Error
         migrate_v2(conn)?;
     }
 
+    if version < 3 {
+        migrate_v3(conn)?;
+    }
+
     conn.pragma_update(None, "user_version", CURRENT_VERSION)?;
+    Ok(())
+}
+
+fn migrate_v3(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
+    conn.execute("ALTER TABLE articles ADD COLUMN ai_summary TEXT", [])?;
+
+    conn.execute_batch(
+        "INSERT OR IGNORE INTO settings (key, value) VALUES ('openrouter_api_key', '');
+         INSERT OR IGNORE INTO settings (key, value) VALUES ('openrouter_model', 'anthropic/claude-haiku-4-5');"
+    )?;
+
     Ok(())
 }
 

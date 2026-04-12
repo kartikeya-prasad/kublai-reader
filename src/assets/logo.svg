@@ -1,57 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Kitten body silhouette - sitting pose -->
-  <path d="
-    M 30 20
-    C 28 12, 32 5, 38 8
-    C 40 4, 44 3, 46 6
-    C 48 2, 52 2, 54 6
-    C 56 3, 60 4, 62 8
-    C 68 5, 72 12, 70 20
-    C 76 24, 78 32, 76 40
-    C 78 44, 78 50, 74 56
-    C 76 62, 74 68, 72 72
-    C 74 78, 76 82, 80 86
-    C 82 88, 82 92, 78 92
-    C 74 92, 70 88, 68 84
-    C 64 90, 56 92, 50 92
-    C 44 92, 36 90, 32 84
-    C 30 88, 26 92, 22 92
-    C 18 92, 18 88, 20 86
-    C 24 82, 26 78, 28 72
-    C 26 68, 24 62, 26 56
-    C 22 50, 22 44, 24 40
-    C 22 32, 24 24, 30 20
-    Z
-  " fill="#F8F9FA" stroke="#94A3B8" stroke-width="1.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <!-- Clip to top semicircle only -->
+    <clipPath id="semi-top">
+      <rect x="0" y="0" width="100" height="50"/>
+    </clipPath>
+  </defs>
 
-  <!-- Left ear inner -->
-  <path d="M 34 18 C 33 13, 36 9, 39 11 C 40 8, 43 7, 44 10 L 40 20 Z" fill="#FFC0CB" opacity="0.5"/>
+  <!-- Dark background -->
+  <rect width="100" height="100" fill="#111111"/>
 
-  <!-- Right ear inner -->
-  <path d="M 66 18 C 67 13, 64 9, 61 11 C 60 8, 57 7, 56 10 L 60 20 Z" fill="#FFC0CB" opacity="0.5"/>
+  <!-- Stained glass rose window — top semicircle -->
+  <!-- Outer circle background (dark lead) -->
+  <circle cx="50" cy="50" r="38" fill="#1a1008" clip-path="url(#semi-top)"/>
 
-  <!-- Left eye -->
-  <ellipse cx="40" cy="38" rx="6" ry="5.5" fill="#60A5FA"/>
-  <ellipse cx="41" cy="37" rx="2" ry="2" fill="#1E3A5F"/>
-  <circle cx="38" cy="36" r="1.5" fill="white" opacity="0.7"/>
+  <!-- Petal segments — 6 wedges in top half -->
+  <path d="M50,50 L18,22 A38,38 0 0,1 36,13 Z" fill="#EA580C" clip-path="url(#semi-top)"/>
+  <path d="M50,50 L36,13 A38,38 0 0,1 50,12 Z" fill="#F59E0B" clip-path="url(#semi-top)"/>
+  <path d="M50,50 L50,12 A38,38 0 0,1 64,13 Z" fill="#CA8A04" clip-path="url(#semi-top)"/>
+  <path d="M50,50 L64,13 A38,38 0 0,1 82,22 Z" fill="#16A34A" clip-path="url(#semi-top)"/>
+  <path d="M50,50 L82,22 A38,38 0 0,1 88,50 Z" fill="#3B82F6" clip-path="url(#semi-top)"/>
+  <path d="M50,50 L12,50 A38,38 0 0,1 18,22 Z" fill="#DC2626" clip-path="url(#semi-top)"/>
 
-  <!-- Right eye -->
-  <ellipse cx="60" cy="38" rx="6" ry="5.5" fill="#60A5FA"/>
-  <ellipse cx="61" cy="37" rx="2" ry="2" fill="#1E3A5F"/>
-  <circle cx="58" cy="36" r="1.5" fill="white" opacity="0.7"/>
+  <!-- Center hub -->
+  <circle cx="50" cy="50" r="8" fill="#F59E0B" clip-path="url(#semi-top)"/>
+  <circle cx="50" cy="50" r="8" fill="none" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
 
-  <!-- Nose -->
-  <path d="M 48 46 L 50 49 L 52 46 Z" fill="#FFB6C1"/>
+  <!-- Lead lines (spokes from center to rim) -->
+  <line x1="50" y1="50" x2="18" y2="22" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
+  <line x1="50" y1="50" x2="36" y2="13" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
+  <line x1="50" y1="50" x2="50" y2="12" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
+  <line x1="50" y1="50" x2="64" y2="13" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
+  <line x1="50" y1="50" x2="82" y2="22" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
+  <line x1="50" y1="50" x2="88" y2="50" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
+  <line x1="50" y1="50" x2="12" y2="50" stroke="#111111" stroke-width="1.5" clip-path="url(#semi-top)"/>
 
-  <!-- Mouth -->
-  <path d="M 50 49 C 48 52, 44 52, 43 50" stroke="#94A3B8" stroke-width="0.8" fill="none"/>
-  <path d="M 50 49 C 52 52, 56 52, 57 50" stroke="#94A3B8" stroke-width="0.8" fill="none"/>
+  <!-- Outer ring -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#111111" stroke-width="2.5" clip-path="url(#semi-top)"/>
 
-  <!-- Whiskers -->
-  <line x1="42" y1="46" x2="24" y2="42" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
-  <line x1="42" y1="48" x2="24" y2="48" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
-  <line x1="42" y1="50" x2="24" y2="54" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
-  <line x1="58" y1="46" x2="76" y2="42" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
-  <line x1="58" y1="48" x2="76" y2="48" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
-  <line x1="58" y1="50" x2="76" y2="54" stroke="#94A3B8" stroke-width="0.6" opacity="0.5"/>
+  <!-- Flat base line (horizon / windowsill) -->
+  <rect x="10" y="48.5" width="80" height="3" fill="#111111"/>
+
+  <!-- Cat silhouette — sitting, facing forward, black -->
+  <!-- Body -->
+  <ellipse cx="50" cy="79" rx="16" ry="14" fill="#111111"/>
+  <!-- Head -->
+  <ellipse cx="50" cy="60" rx="13" ry="12" fill="#111111"/>
+  <!-- Left ear -->
+  <polygon points="38,52 35,40 45,50" fill="#111111"/>
+  <!-- Right ear -->
+  <polygon points="62,52 65,40 55,50" fill="#111111"/>
+  <!-- Tail — curls around bottom-left -->
+  <path d="M 36 88 Q 22 92 20 80 Q 18 68 32 70" fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Eyes — amber glow -->
+  <ellipse cx="44" cy="59" rx="3.5" ry="3" fill="#F59E0B"/>
+  <ellipse cx="56" cy="59" rx="3.5" ry="3" fill="#F59E0B"/>
+  <!-- Slit pupils -->
+  <ellipse cx="44" cy="59" rx="1.2" ry="2.5" fill="#111111"/>
+  <ellipse cx="56" cy="59" rx="1.2" ry="2.5" fill="#111111"/>
+  <!-- Eye shine -->
+  <circle cx="42.5" cy="57.5" r="0.8" fill="white" opacity="0.8"/>
+  <circle cx="54.5" cy="57.5" r="0.8" fill="white" opacity="0.8"/>
 </svg>

@@ -392,6 +392,12 @@
                     <span class="author">{article.author}</span>
                   {/if}
                   <div class="card-indicators">
+                    {#if article.has_parsed_content}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="reader-icon" aria-label="Full text extracted">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                      </svg>
+                    {/if}
                     {#if article.is_starred}
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" class="star-icon">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -438,6 +444,13 @@
                   <span class="feed-name">{article.feed_title}</span>
                   <span class="bullet">·</span>
                   <span class="article-date">{formatDate(article.published_at)}</span>
+                  {#if article.has_parsed_content}
+                    <span class="bullet">·</span>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reader-icon" aria-label="Full text extracted">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                  {/if}
                   {#if article.is_starred}
                     <span class="bullet">·</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="star-icon">
@@ -755,6 +768,11 @@
 
   .later-icon {
     color: var(--color-accent);
+  }
+
+  .reader-icon {
+    color: var(--color-accent);
+    opacity: 0.7;
   }
 
   .card-thumbnail {

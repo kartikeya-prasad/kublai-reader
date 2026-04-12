@@ -23,8 +23,10 @@
     closeSettingsDialog,
     closeAddFeedDialog,
     updateSelectedArticleParsedContent,
+    fetchAiSummary,
   } from "$lib/stores/app.svelte";
   import { parseArticle } from "$lib/utils/tauri";
+  import WindowControls from "./WindowControls.svelte";
 
   const appState = getState();
 
@@ -97,6 +99,11 @@
     // W: toggle extraction
     if ((e.key === "w" || e.key === "W") && appState.selectedArticle) {
       handleToggleExtraction();
+    }
+
+    // A: AI summary
+    if ((e.key === "a" || e.key === "A") && appState.selectedArticle) {
+      fetchAiSummary(appState.selectedArticle.id);
     }
 
     // Ctrl+Shift+A: mark all read
@@ -200,6 +207,9 @@
       <ArticleReader />
     </div>
   </div>
+
+  <!-- Window Controls (custom titlebar buttons) -->
+  <WindowControls />
 
   <!-- Dialogs -->
   {#if appState.showAddFeedDialog}

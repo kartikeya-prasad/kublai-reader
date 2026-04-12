@@ -24,6 +24,7 @@ import {
   searchArticles,
   getTags,
   getFavicon,
+  summarizeArticle,
 } from "$lib/utils/tauri";
 
 // ===== State =====
@@ -71,6 +72,11 @@ let showSettingsDialog = $state(false);
 
 let selectedArticleIndex = $state(-1);
 let faviconCache = $state(new Map<number, string>());
+
+// AI summary state
+let aiSummary = $state<string | null>(null);
+let isLoadingSummary = $state(false);
+let summaryError = $state<string | null>(null);
 
 // ===== Derived state =====
 
@@ -170,6 +176,9 @@ export async function selectFilter(filter: ArticleFilter): Promise<void> {
 export async function selectArticle(item: ArticleListItem): Promise<void> {
   selectedArticleListItem = item;
   isLoadingArticle = true;
+  // Clear AI summary when switching articles
+  aiSummary = null;
+  summaryError = null;
   try {
     const article = await getArticle(item.id);
     selectedArticle = article;
@@ -361,6 +370,26 @@ export function navigateArticle(delta: number): void {
   }
 }
 
+export async function fetchAiSummary(articleId: number): Promise<void> {
+  if (isLoadingSummary) return;
+  aiSummary = null;
+  summaryError = null;
+  isLoadingSummary = true;
+  try {
+    const summary = await summarizeArticle(articleId);
+    aiSummary = summary;
+  } catch (e: unknown) {
+    summaryError = e instanceof Error ? e.message : String(e);
+  } finally {
+    isLoadingSummary = false;
+  }
+}
+
+export function clearAiSummary(): void {
+  aiSummary = null;
+  summaryError = null;
+}
+
 export async function getFaviconCached(feedId: number): Promise<string | null> {
   if (faviconCache.has(feedId)) return faviconCache.get(feedId) ?? null;
   const uri = await getFavicon(feedId);
@@ -407,5 +436,8 @@ export function getState() {
     get showSettingsDialog() { return showSettingsDialog; },
     get selectedArticleIndex() { return selectedArticleIndex; },
     get faviconCache() { return faviconCache; },
+    get aiSummary() { return aiSummary; },
+    get isLoadingSummary() { return isLoadingSummary; },
+    get summaryError() { return summaryError; },
   };
 }

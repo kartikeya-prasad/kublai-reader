@@ -54,6 +54,7 @@ pub struct Article {
     pub is_read_later: bool,
     pub sync_id: Option<String>,
     pub content_cached_at: Option<String>,
+    pub ai_summary: Option<String>,
     pub created_at: String,
 }
 

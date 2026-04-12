@@ -187,6 +187,12 @@ export async function syncNow(accountId: number): Promise<SyncResult> {
   return invoke<SyncResult>('sync_now', { accountId });
 }
 
+// ===== AI =====
+
+export async function summarizeArticle(articleId: number): Promise<string> {
+  return invoke<string>('summarize_article', { articleId });
+}
+
 // ===== Settings =====
 
 export async function getSetting(key: string): Promise<string | null> {
